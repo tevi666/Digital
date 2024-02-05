@@ -1,0 +1,10 @@
+export 'package:flutter/material.dart';
+export 'package:sobol_digital/data/local/user_info_provider.dart';
+export 'package:sobol_digital/presentations/widgets/global_avatar.dart';
+export 'package:sobol_digital/presentations/widgets/global_list_tile.dart';
+export 'package:sobol_digital/presentations/widgets/global_text.dart';
+export 'package:sobol_digital/utilities/constants/app_colors.dart';
+export 'package:sobol_digital/utilities/constants/app_sized_box.dart';
+export 'package:provider/provider.dart';
+export 'package:sobol_digital/presentations/pages/account/widgets/my_account_info.dart';
+export 'package:sobol_digital/presentations/pages/registration/registration.dart';
