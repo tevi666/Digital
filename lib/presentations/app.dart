@@ -17,6 +17,7 @@ class Digital extends StatelessWidget {
         ),
         scaffoldBackgroundColor: AppColors.primary,
         appBarTheme: const AppBarTheme(
+          centerTitle: true,
           elevation: 0,
           backgroundColor: AppColors.primary,
         ),
