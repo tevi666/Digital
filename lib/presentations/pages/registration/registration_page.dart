@@ -64,7 +64,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
   @override
   Widget build(BuildContext context) {
     UserInfoProvider userInfoProvider = Provider.of<UserInfoProvider>(context);
-    MaskTextInputFormatter ms = MaskTextInputFormatter();
 
     return Scaffold(
       appBar: AppBar(
@@ -226,6 +225,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                                     onCodeChanged: (code) {
                                       if (code!.length == 6) {
                                         verifyOTP();
+                                          onCompletedStep();
                                       }
                                     },
                                     codeLength: 6,
@@ -353,7 +353,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           controller: phoneController,
                           onChanged: (v) {
                             setState(() {
-                              isPhoneNumberFilled = v.length == maskFormatter.getMask()!.length;
+                              isPhoneNumberFilled =
+                                  v.length == maskFormatter.getMask()!.length;
                             });
                           },
                           keyboardType: TextInputType.phone,
@@ -365,21 +366,20 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         : GlobalButton(
                             onPressed: () {
                               if (isPhoneNumberFilled) {
-        loginWithPhone();
-        Future.delayed(const Duration(seconds: 1), () {
-          onCompletedStep();
-        });
-      }
+                                loginWithPhone();
+                                Future.delayed(const Duration(seconds: 1), () {
+                                  onCompletedStep();
+                                });
+                              }
                             },
                             title: 'Отправить смс-код',
                             color: AppColors.text,
                             size: 16,
                             maskFormatter: maskFormatter,
                             smsCodeDescription: smsCodeDescription,
-                            bg: isPhoneNumberFilled ? AppColors.gold : AppColors.inactiveButton
-
-                            ),
-
+                            bg: isPhoneNumberFilled
+                                ? AppColors.gold
+                                : AppColors.inactiveButton),
                     AppSizedBox.t8,
                     _currentStep > 1
                         ? const SizedBox()
@@ -455,7 +455,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   void loginWithPhone() async {
-    var formatted = formatPhoneNumber(phoneController.text);
     auth.verifyPhoneNumber(
       phoneNumber: phoneController.text,
       verificationCompleted: (PhoneAuthCredential credential) async {
@@ -482,9 +481,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     );
 
     try {
-      // Попытка верификации кода
       await auth.signInWithCredential(credential);
-      // Если код верифицирован успешно, вызывается метод onCompletedStep()
       onCompletedStep();
       print("You are logged in successfully");
       Fluttertoast.showToast(
@@ -492,12 +489,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.CENTER,
         timeInSecForIosWeb: 2,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.green,
         textColor: Colors.white,
         fontSize: 16.0,
       );
     } catch (error) {
-      // Если произошла ошибка при верификации кода, выводится сообщение об ошибке
       print("Error verifying OTP: $error");
       Fluttertoast.showToast(
         msg: "Not Right Code",
