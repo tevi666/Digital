@@ -1,4 +1,4 @@
-package com.coders.chat_firebase
+package com.otp.so
 
 import io.flutter.embedding.android.FlutterActivity
 

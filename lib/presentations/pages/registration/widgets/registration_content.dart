@@ -3,18 +3,17 @@ import 'package:sms_autofill/sms_autofill.dart';
 import '../registration.dart';
 
 class RegistrationContent extends StatefulWidget {
-  const RegistrationContent({
-    Key? key,
-    required this.inputController,
-    required this.isButtonEnabled,
-    required this.maskFormatter,
-    required this.currentStep,
-    required this.onCompleteStep,
-    required this.smsCodeDescription,
-    required this.phoneNumber,
-    required this.inputControllerName,
-    required this.inputControllerSurname,
-  }) : super(key: key);
+  const RegistrationContent(
+      {super.key,
+      required this.inputController,
+      required this.inputControllerName,
+      required this.inputControllerSurname,
+      required this.isButtonEnabled,
+      required this.maskFormatter,
+      required this.currentStep,
+      required this.onCompleteStep,
+      required this.smsCodeDescription,
+      required this.phoneNumber});
 
   final TextEditingController inputController;
   final TextEditingController inputControllerName;
@@ -27,33 +26,35 @@ class RegistrationContent extends StatefulWidget {
   final String phoneNumber;
 
   @override
-  State<RegistrationContent> createState() => _RegistrationContentState();
+  _RegistrationContentState createState() => _RegistrationContentState();
 }
 
-class _RegistrationContentState extends State<RegistrationContent> {
+class _RegistrationContentState extends State<RegistrationContent>
+    with AutomaticKeepAliveClientMixin {
+  late PageStorageKey _pageStorageKey;
+
+  @override
+  bool get wantKeepAlive => true;
+  TextEditingController phoneController = TextEditingController();
+  TextEditingController otpController = TextEditingController();
   late int timer;
   PageController pageController = PageController();
-  // late AuthLogic authLogic;
+  FirebaseAuth auth = FirebaseAuth.instance;
 
-  // TextEditingController phoneController =
-  //     TextEditingController(text: '+1(555) 123-45-67');
-  // TextEditingController otpController = TextEditingController();
+  bool otpVisibility = false;
 
-  // FirebaseAuth auth = FirebaseAuth.instance;
-
-  // bool otpVisibility = false;
-
-  // String verificationID = "";
+  String verificationID = "";
 
   @override
   void initState() {
     super.initState();
+    _pageStorageKey = PageStorageKey(widget.key);
     timer = 0;
-    // authLogic = AuthLogic();
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     UserInfoProvider userInfoProvider = Provider.of<UserInfoProvider>(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -82,29 +83,45 @@ class _RegistrationContentState extends State<RegistrationContent> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 55),
-                child: Platform.isAndroid ? Pinput(
-                  length: 6,
-                  onChanged: (code) => {
-                    if (code.length == 6) {
-                        widget.onCompleteStep()
-                      }
-                  },
-                ) : PinFieldAutoFill(
-                  autoFocus: true,
-                  decoration: UnderlineDecoration(
-                    colorBuilder: const FixedColorBuilder(AppColors.inactiveButton),
-                    textStyle: const TextStyle(fontSize: 18, color: AppColors.text),
-                  ),
-                  onCodeSubmitted: (code) {
-                  },
-                  onCodeChanged: (code) {
-                      if (code!.length == 6) {
-                        widget.onCompleteStep();
-                      }
-                  },
-                  codeLength: 6,
-                ),
+                child: Platform.isAndroid
+                    ? Pinput(
+                        controller: otpController,
+                        length: 6,
+                        onChanged: (code) => {
+                          verifyOTP(),
+                          // if (code.length == 6) {widget.onCompleteStep()}
+                        },
+                      )
+                    : PinFieldAutoFill(
+                        controller: otpController,
+                        autoFocus: true,
+                        decoration: UnderlineDecoration(
+                          colorBuilder:
+                              const FixedColorBuilder(AppColors.inactiveButton),
+                          textStyle: const TextStyle(
+                              fontSize: 18, color: AppColors.text),
+                        ),
+                        onCodeSubmitted: (code) {},
+                        onCodeChanged: (code) {
+                          verifyOTP();
+                          // if (code.length == 6) {
+                          //   // widget.onCompleteStep();
+                          // }
+                        },
+                        codeLength: 6,
+                      ),
               ),
+              ElevatedButton(
+                  onPressed: () {
+                    if (otpVisibility) {
+                      verifyOTP();
+                    } else {
+                      loginWithPhone();
+                    }
+                  },
+                  child: otpVisibility
+                      ? Icon(Icons.abc)
+                      : Icon(Icons.next_plan_outlined)),
               AppSizedBox.t45,
               StatefulBuilder(
                 builder: (BuildContext context, StateSetter setState) {
@@ -220,7 +237,7 @@ class _RegistrationContentState extends State<RegistrationContent> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GlobalInput(
               inputFormatters: [widget.maskFormatter],
-              controller: widget.inputController,
+              controller: phoneController,
               onChanged: (v) {},
               keyboardType: TextInputType.phone,
             ),
@@ -231,7 +248,10 @@ class _RegistrationContentState extends State<RegistrationContent> {
             : GlobalButton(
                 onPressed: () {
                   if (widget.maskFormatter.isFill()) {
-                    widget.onCompleteStep();
+                    loginWithPhone();
+                    Future.delayed(const Duration(seconds: 1), () {
+                      widget.onCompleteStep();
+                    });
                   }
                 },
                 title: 'Отправить смс-код',
@@ -245,6 +265,31 @@ class _RegistrationContentState extends State<RegistrationContent> {
               ),
         AppSizedBox.t8,
         widget.currentStep > 1 ? const SizedBox() : const PersonalInfoText(),
+        // TextField(
+        //   controller: phoneController,
+        //   decoration: InputDecoration(labelText: "Phone number"),
+        //   keyboardType: TextInputType.phone,
+        // ),
+        // Visibility(
+        //   child: TextField(
+        //     controller: otpController,
+        //     decoration: InputDecoration(),
+        //     keyboardType: TextInputType.number,
+        //   ),
+        //   visible: otpVisibility,
+        // ),
+        // SizedBox(
+        //   height: 10,
+        // ),
+        // ElevatedButton(
+        //     onPressed: () {
+        //       if (otpVisibility) {
+        //         verifyOTP();
+        //       } else {
+        //         loginWithPhone();
+        //       }
+        //     },
+        //     child: Text(otpVisibility ? "Verify" : "Login")),
       ],
     );
   }
@@ -283,82 +328,51 @@ class _RegistrationContentState extends State<RegistrationContent> {
     }
   }
 
-  // String formatPhoneNumber(String phoneNumber) {
-  //   String cleaned = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+  String formatPhoneNumber(String phoneNumber) {
+    String cleaned = phoneController.text.replaceAll(RegExp(r'[^\d+]'), '');
 
-  //   if (!cleaned.startsWith('+')) {
-  //     cleaned = '+$cleaned';
-  //   }
+    if (!cleaned.startsWith('+')) {
+      cleaned = '+$cleaned';
+    }
 
-  //   return cleaned;
-  // }
+    return cleaned;
+  }
 
-  // void loginWithPhone() async {
-  //   // Форматируем введенный номер телефона
-  //   String formattedPhoneNumber = formatPhoneNumber(phoneController.text);
-  //   print(formattedPhoneNumber);
-  //   try {
-  //     await auth.verifyPhoneNumber(
-  //       phoneNumber: formattedPhoneNumber,
-  //       verificationCompleted: (PhoneAuthCredential credential) async {
-  //         await auth.signInWithCredential(credential).then((value) {
-  //           widget.onCompleteStep();
-  //           print("You are logged in successfully");
-  //         });
-  //       },
-  //       verificationFailed: (FirebaseAuthException e) {
-  //         print(e.message);
-  //       },
-  //       codeSent: (String verificationId, int? resendToken) {
-  //         otpVisibility = true;
-  //         verificationID = verificationId;
-  //         setState(() {});
-  //       },
-  //       codeAutoRetrievalTimeout: (String verificationId) {},
-  //     );
-  //   } catch (e) {
-  //     print("Error during phone verification: $e");
-  //   }
-  // }
+  void loginWithPhone() async {
+    var formatted = formatPhoneNumber(phoneController.text);
+    auth.verifyPhoneNumber(
+      phoneNumber: phoneController.text,
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        await auth.signInWithCredential(credential).then((value) {
+          print("You are logged in successfully");
+        });
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        print(e.message);
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        otpVisibility = true;
+        verificationID = verificationId;
+        setState(() {});
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {},
+    );
+  }
 
-  // void verifyOTP() async {
-  //   try {
-  //     PhoneAuthCredential credential = PhoneAuthProvider.credential(
-  //         verificationId: verificationID, smsCode: otpController.text);
+  void verifyOTP() async {
+    PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: verificationID, smsCode: otpController.text);
 
-  //     UserCredential authResult = await auth.signInWithCredential(credential);
-
-  //     if (authResult.user != null) {
-  //       print("You are logged in successfully");
-  //       Fluttertoast.showToast(
-  //           msg: "You are logged in successfully",
-  //           toastLength: Toast.LENGTH_SHORT,
-  //           gravity: ToastGravity.CENTER,
-  //           timeInSecForIosWeb: 1,
-  //           backgroundColor: Colors.green,
-  //           textColor: Colors.white,
-  //           fontSize: 16.0);
-  //     } else {
-  //       print("Failed to log in");
-  //       Fluttertoast.showToast(
-  //           msg: "Failed to log in",
-  //           toastLength: Toast.LENGTH_SHORT,
-  //           gravity: ToastGravity.CENTER,
-  //           timeInSecForIosWeb: 1,
-  //           backgroundColor: Colors.red,
-  //           textColor: Colors.white,
-  //           fontSize: 16.0);
-  //     }
-  //   } catch (e) {
-  //     print("Error during phone verification: $e");
-  //     Fluttertoast.showToast(
-  //         msg: "Error during phone verification: $e",
-  //         toastLength: Toast.LENGTH_SHORT,
-  //         gravity: ToastGravity.CENTER,
-  //         timeInSecForIosWeb: 1,
-  //         backgroundColor: Colors.red,
-  //         textColor: Colors.white,
-  //         fontSize: 16.0);
-  //   }
-  // }
+    await auth.signInWithCredential(credential).then((value) {
+      print("You are logged in successfully");
+      Fluttertoast.showToast(
+          msg: "You are logged in successfully",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    });
+  }
 }
